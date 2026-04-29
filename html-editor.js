@@ -14,15 +14,37 @@ class HtmlEventManager {
       "change",
       "submit",
     ];
-    this.actions = [
+    this.generalActions = [
       { id: "toggle", label: "Toggle Visibility" },
       { id: "show", label: "Show Element" },
       { id: "hide", label: "Hide Element" },
       { id: "addClass", label: "Add Class" },
       { id: "removeClass", label: "Remove Class" },
-      { id: "setStyle", label: "Set Style (prop:val)" },
-      { id: "setHTML", label: "Set Content" },
     ];
+  }
+
+  getActionsForTarget(targetSelector) {
+    if (!targetSelector) return this.generalActions;
+    const target = document.querySelector(targetSelector);
+    if (!target) return this.generalActions;
+
+    const tag = target.tagName;
+    const attrs = this.editor.tagAttributes[tag] || [];
+    const list = [...this.generalActions];
+
+    // Add Attribute Actions
+    attrs.forEach(a => {
+        list.push({ id: `attr:${a.prop}`, label: `Set ${a.label}` });
+    });
+
+    // Add Common Style Actions
+    const commonStyles = [
+        { id: 'style:color', label: 'Set Text Color' },
+        { id: 'style:backgroundColor', label: 'Set Background' },
+        { id: 'style:display', label: 'Set Display' },
+        { id: 'style:opacity', label: 'Set Opacity' }
+    ];
+    return [...list, ...commonStyles];
   }
 
   render(el) {
@@ -33,65 +55,80 @@ class HtmlEventManager {
       events = [];
     }
 
-    let h = `<div class="he-s-group"><div class="he-s-title">Event Triggers (Unity-Style)</div>`;
+    let h = `
+        <div class="he-s-group">
+            <div class="he-s-title">Logic Interactions</div>`;
 
     events.forEach((ev, idx) => {
       const isDyn = ev.vmode === "dynamic";
+      const hasTarget = !!ev.target;
+      const targetActions = hasTarget ? this.getActionsForTarget(ev.target) : [];
+      
       h += `
-            <div class="he-event-card" style="background:var(--he-bg); border:1px solid var(--he-b); padding:12px; border-radius:14px; margin-bottom:12px; position:relative; overflow:hidden">
-                <div class="he-grid-2">
-                    <div>
-                        <label class="he-label">Trigger</label>
-                        <select class="he-input he-ev-type" data-idx="${idx}">
-                            ${this.triggers.map((t) => `<option value="${t}" ${ev.type === t ? "selected" : ""}>${t.toUpperCase()}</option>`).join("")}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="he-label">Target ID</label>
-                        <div class="he-ev-drop" data-idx="${idx}" data-field="target" style="height:32px; border:2px dashed var(--he-p); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--he-p); background:white; cursor:crosshair; font-weight:800">
-                            ${ev.target || "DRAG TARGET"}
-                        </div>
-                    </div>
+            <div class="he-event-card" style="background:white; border:1px solid var(--he-b); padding:16px; border-radius:20px; margin-bottom:16px; position:relative; box-shadow:0 10px 15px -3px rgba(0,0,0,0.04)">
+                <div class="he-field">
+                    <label class="he-label">1. When this happens...</label>
+                    <select class="he-input he-ev-type" data-idx="${idx}">
+                        ${this.triggers.map((t) => `<option value="${t}" ${ev.type === t ? "selected" : ""}>${t.toUpperCase()}</option>`).join("")}
+                    </select>
                 </div>
-                
-                <div class="he-grid-2" style="margin-top:10px">
-                    <div>
-                        <label class="he-label">Action</label>
-                        <select class="he-input he-ev-action" data-idx="${idx}">
-                            ${this.actions.map((a) => `<option value="${a.id}" ${ev.action === a.id ? "selected" : ""}>${a.label}</option>`).join("")}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="he-label">Value Mode</label>
-                        <select class="he-input he-ev-vmode" data-idx="${idx}">
-                            <option value="static" ${!isDyn ? "selected" : ""}>Static</option>
-                            <option value="dynamic" ${isDyn ? "selected" : ""}>From Element</option>
-                        </select>
+
+                <div style="margin-top:14px">
+                    <label class="he-label">2. Target Element</label>
+                    <div class="he-ev-drop" data-idx="${idx}" data-field="target" style="width:100%; height:80px; border:2px dashed ${hasTarget ? 'var(--he-p)' : '#e2e8f0'}; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:12px; color:${hasTarget ? 'var(--he-p)' : '#94a3b8'}; background:${hasTarget ? 'var(--he-p-light)' : '#f8fafc'}; cursor:crosshair; transition:0.2s">
+                        ${hasTarget ? `
+                            <i class="fa fa-check-circle" style="font-size:20px; margin-bottom:8px"></i>
+                            <span style="font-weight:800; text-transform:uppercase; letter-spacing:1px">${ev.target}</span>
+                            <span style="font-size:10px; opacity:0.6; margin-top:4px">Drag new element to replace</span>
+                        ` : `
+                            <i class="fa fa-plus-circle" style="font-size:24px; margin-bottom:8px; opacity:0.2"></i>
+                            <span style="font-weight:700">DRAG TARGET ELEMENT HERE</span>
+                        `}
                     </div>
                 </div>
 
-                <div style="margin-top:10px">
-                    ${isDyn ? `
+                ${hasTarget ? `
+                    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--he-b)">
                         <div class="he-grid-2">
                             <div>
-                                <label class="he-label">Source ID</label>
-                                <div class="he-ev-drop" data-idx="${idx}" data-field="source" style="height:32px; border:2px dashed #10b981; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#10b981; background:white; cursor:crosshair; font-weight:800">
-                                    ${ev.source || "DRAG SOURCE"}
-                                </div>
+                                <label class="he-label">3. Perform Action</label>
+                                <select class="he-input he-ev-action" data-idx="${idx}">
+                                    ${targetActions.map((a) => `<option value="${a.id}" ${ev.action === a.id ? "selected" : ""}>${a.label}</option>`).join("")}
+                                </select>
                             </div>
                             <div>
-                                <label class="he-label">Source Prop</label>
-                                <input type="text" class="he-input he-ev-sprop" data-idx="${idx}" value="${ev.sprop || "value"}" placeholder="e.g. value, innerHTML">
+                                <label class="he-label">4. Value Mode</label>
+                                <select class="he-input he-ev-vmode" data-idx="${idx}">
+                                    <option value="static" ${!isDyn ? "selected" : ""}>Static Value</option>
+                                    <option value="dynamic" ${isDyn ? "selected" : ""}>Live Mapping</option>
+                                </select>
                             </div>
                         </div>
-                    ` : `
-                        <label class="he-label">Static Value / Params</label>
-                        <input type="text" class="he-input he-ev-val" data-idx="${idx}" value="${ev.val || ""}" placeholder="e.g. display:none">
-                    `}
-                </div>
 
-                <button class="he-ev-del" data-idx="${idx}" style="position:absolute; top:8px; right:8px; background:none; border:none; color:#fda4af; cursor:pointer; font-size:12px">
-                    <i class="fa fa-times-circle"></i>
+                        <div style="margin-top:12px; background:var(--he-bg); padding:14px; border-radius:12px; border:1px solid var(--he-b)">
+                            ${isDyn ? `
+                                <div class="he-grid-2">
+                                    <div>
+                                        <label class="he-label">Source Data</label>
+                                        <div class="he-ev-drop" data-idx="${idx}" data-field="source" style="height:36px; border:2px dashed #10b981; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#10b981; background:white; cursor:crosshair; font-weight:800">
+                                            <i class="fa fa-database" style="margin-right:6px"></i> ${ev.source || "DRAG SOURCE"}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="he-label">Source Property</label>
+                                        <input type="text" class="he-input he-ev-sprop" data-idx="${idx}" value="${ev.sprop || "value"}" placeholder="e.g. value">
+                                    </div>
+                                </div>
+                            ` : `
+                                <label class="he-label">Target Value / Parameter</label>
+                                <input type="text" class="he-input he-ev-val" data-idx="${idx}" value="${ev.val || ""}" placeholder="e.g. active-class or #ff0000">
+                            `}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <button class="he-ev-del" data-idx="${idx}" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fda4af; cursor:pointer; font-size:16px; transition:0.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#fda4af'">
+                    <i class="fa fa-trash"></i>
                 </button>
             </div>`;
     });
@@ -202,7 +239,8 @@ class HtmlEditor {
     this.history = [];
     this.historyIndex = -1;
     this.isSidebarOpen = false;
-    this.isInspectorLocked = false; // Add Lock State
+    this.isInspectorLocked = false;
+    this.inspectedElement = null; // Track pinned element
     this.searchQuery = "";
     this.draggedElForEvent = null;
     this.eventManager = new HtmlEventManager(this);
@@ -780,6 +818,8 @@ class HtmlEditor {
             .he-workspace { display: flex; flex: 1; flex-direction: column; align-items: center; background: #f1f5f9; overflow: auto; padding: 0; position: relative; z-index: 1; scroll-behavior: smooth; width: 100%; }
             .he-canvas { width: 100%;min-height:100%;margin-bottom:50px; background: white; border-radius: 0; padding: 40px; position: relative; outline: none; box-sizing: border-box; box-shadow: none; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             
+            .he-inspected { outline: 2px solid var(--he-p) !important; outline-offset: -2px !important; box-shadow: inset 0 0 0 1000px rgba(79, 70, 229, 0.05) !important; }
+            
             .he-hover-box { position: absolute; pointer-events: none; border: 2px solid var(--he-p); border-style: dashed; z-index: 99999; display: none; border-radius: 4px; }
             .he-floating-overlay { position: absolute; display: none; pointer-events: none; z-index: 100000; outline: 2px solid var(--he-p); outline-offset: 4px; border-radius: 4px; }
             .he-floating-controls { position: absolute; top: -48px; right: -4px; background: var(--he-p); display: flex; gap: 4px; padding: 6px; border-radius: 10px 10px 0 0; pointer-events: auto; box-shadow: var(--he-shadow); }
@@ -841,6 +881,9 @@ class HtmlEditor {
             .he-context-item i { width: 20px; text-align: center; font-size: 14px; }
 
             .he-fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483647 !important; margin: 0 !important; border-radius: 0 !important; }
+            
+            .he-drop-indicator { position: absolute; height: 4px; background: var(--he-p); border-radius: 2px; z-index: 100000; pointer-events: none; display: none; transition: top 0.1s, left 0.1s, width 0.1s; }
+            body.he-dragging * { cursor: grabbing !important; }
 
             /* Raw Content Maximize */
             .he-s-group.maximized { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 100; padding: 16px; margin: 0; display: flex; flex-direction: column; }
@@ -888,6 +931,7 @@ class HtmlEditor {
                         </div>
                     </div>
                     <div class="he-hover-box" id="he-hover-box"></div>
+                    <div class="he-drop-indicator" id="he-drop-indicator"></div>
                     <div class="he-floating-overlay" id="he-floating-overlay">
                         <div class="he-floating-controls">
                             <div class="he-ctrl-btn" id="he-drag-handle" draggable="true" title="Drag to Move"><i class="fa fa-arrows-alt"></i></div>
@@ -941,6 +985,7 @@ class HtmlEditor {
     this.elementsList = document.getElementById("he-elements-list");
     this.libraryModal = document.getElementById("he-library-modal");
     this.contextMenu = document.getElementById("he-context-menu");
+    this.dropIndicator = document.getElementById("he-drop-indicator");
   }
 
   renderElementsList() {
@@ -1147,17 +1192,23 @@ class HtmlEditor {
 
     // Drag & Drop Reordering Logic
     let draggedEl = null;
+    let dropTarget = null;
+    let dropPosition = 'after'; // 'before' or 'after'
+    
     const dragHandle = document.getElementById("he-drag-handle");
     dragHandle.addEventListener("dragstart", (e) => {
       if (!this.selectedElement) return;
       draggedEl = this.selectedElement;
       this.draggedElForEvent = draggedEl;
       draggedEl.style.opacity = "0.4";
+      document.body.classList.add('he-dragging');
       e.dataTransfer.setDragImage(draggedEl, 10, 10);
     });
 
     dragHandle.addEventListener("dragend", () => {
       if (draggedEl) draggedEl.style.opacity = "1";
+      document.body.classList.remove('he-dragging');
+      this.dropIndicator.style.display = 'none';
       draggedEl = null;
       this.updateOverlay();
     });
@@ -1165,28 +1216,34 @@ class HtmlEditor {
     this.canvas.addEventListener("dragover", (e) => {
       e.preventDefault();
       if (!draggedEl) return;
-      const target = e.target.closest("*");
-      if (
-        target &&
-        target !== draggedEl &&
-        target !== this.canvas &&
-        this.canvas.contains(target) &&
-        !target.classList.contains("he-placeholder")
-      ) {
+      const target = e.target.closest("#he-canvas > *");
+      if (target && target !== draggedEl && target !== this.canvas) {
         const rect = target.getBoundingClientRect();
-        const next = e.clientY - rect.top > rect.height / 2;
-        target.parentNode.insertBefore(
-          draggedEl,
-          next ? target.nextSibling : target,
-        );
-        this.updateOverlay();
+        const ws = this.canvas.parentNode.getBoundingClientRect();
+        const isAfter = e.clientY - rect.top > rect.height / 2;
+        
+        dropTarget = target;
+        dropPosition = isAfter ? 'after' : 'before';
+
+        this.dropIndicator.style.display = 'block';
+        this.dropIndicator.style.width = rect.width + 'px';
+        this.dropIndicator.style.left = rect.left - ws.left + this.canvas.parentNode.scrollLeft + 'px';
+        const top = isAfter ? rect.bottom : rect.top;
+        this.dropIndicator.style.top = top - ws.top + this.canvas.parentNode.scrollTop - 2 + 'px';
       }
     });
 
     this.canvas.addEventListener("drop", (e) => {
       e.preventDefault();
-      this.saveToHistory();
-      this.triggerC();
+      if (draggedEl && dropTarget) {
+        if (dropPosition === 'after') dropTarget.after(draggedEl);
+        else dropTarget.before(draggedEl);
+        
+        this.saveToHistory();
+        this.triggerC();
+        this.updateOverlay();
+      }
+      this.dropIndicator.style.display = 'none';
     });
   }
 
@@ -1255,18 +1312,25 @@ class HtmlEditor {
     this.updateOverlay();
   }
   select(e) {
-    if (this.isInspectorLocked) return;
     this.selectedElement = e;
-    this.container
-      .querySelectorAll(".he-selected")
-      .forEach((x) => x.classList.remove("he-selected"));
-    e.classList.add("he-selected");
     this.updateOverlay();
-    if (this.isSidebarOpen) this.renderProps();
+
+    if (!this.isInspectorLocked) {
+      this.inspectedElement = e;
+      this.container
+        .querySelectorAll(".he-inspected")
+        .forEach((x) => x.classList.remove("he-inspected"));
+      e.classList.add("he-inspected");
+      if (this.isSidebarOpen) this.renderProps();
+    }
   }
   deselect() {
     this.selectedElement = null;
+    this.inspectedElement = null;
     this.floatingOverlay.style.display = "none";
+    this.container
+      .querySelectorAll(".he-inspected")
+      .forEach((x) => x.classList.remove("he-inspected"));
     this.props.innerHTML = "";
   }
   updateOverlay() {
@@ -1289,8 +1353,8 @@ class HtmlEditor {
   }
 
   renderProps() {
-    if (!this.selectedElement) return;
-    const e = this.selectedElement;
+    if (!this.inspectedElement) return;
+    const e = this.inspectedElement;
     let el = e;
     if (e.classList.contains("he-media-wrap"))
       el = e.querySelector("audio, video, img") || e;

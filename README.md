@@ -1,77 +1,70 @@
 # Premium HTML Page Builder & Visual Editor
 
-A powerful, lightweight, and fully customizable visual page builder written in vanilla JavaScript. Designed to turn any standard `<textarea>` or `<div>` into a high-end drag-and-drop editor for modern web projects.
+A high-density, professional-grade visual page builder written in vanilla JavaScript. Designed to transform any standard `<textarea>` or `<div>` into a sophisticated, Unity-inspired design environment for modern web applications.
 
-## 🚀 Features
+## 🚀 Key Features
 
--   **Visual Drag & Drop**: Over 20+ pre-styled components (Sections, Grids, Cards, CTAs, FAQs, Forms).
--   **Rich Text Editing**: Direct inline editing for all text elements with toolbar support (Bold, Italic, Underline).
--   **Advanced Inspector**: Deep-level customization of any element's styles, attributes (src, href, id, classes), and raw HTML.
--   **Auto-Height Support**: The editor grows naturally with your content, featuring a sticky toolbar for easy access.
--   **Textarea Synchronization**: Seamlessly replaces `<textarea>` elements in forms and keeps the `value` updated in real-time.
--   **Responsive Design**: Built-in device toggles (Desktop, Tablet, Mobile) to ensure your design looks perfect everywhere.
--   **History Management**: Full Undo/Redo support for a worry-free design process.
--   **Zero Dependencies**: Built with pure Vanilla JS and FontAwesome.
+-   **Unity-Style Logic Engine**: Define complex cross-element interactions visually. Link events like "Click" or "Hover" to target-specific actions with zero code.
+-   **Context-Aware Inspector**: The sidebar automatically adapts to your selection, offering specific controls for Images, Videos, Form Elements, and more.
+-   **Visual Drop Indicator**: Experience precision reordering with a high-fidelity "Purple Line" insertion system that shows you exactly where your content will land.
+-   **Persistent Workspace**: Built-in `localStorage` synchronization ensuring your design survives page refreshes and browser crashes.
+-   **Inspector Pin (Lock)**: Pin the property panel to one element while you browse and drag other elements as logic targets.
+-   **Responsive Master Toggles**: Instantly switch between Desktop, Tablet, and Mobile views with a single click.
+-   **Raw Content Engine**: Real-time attribute and HTML editing for power users who need pixel-perfect control.
+-   **History Management**: Robust Undo/Redo stack protecting every design decision.
+-   **Zero Dependencies**: Pure Vanilla JS architecture. No frameworks, no bloat.
 
-## 📦 Installation
+## 📦 Quick Start
 
-Simply include the `html-editor.js` in your project. The editor will automatically handle FontAwesome and Google Font dependencies for you:
+Simply include the `html-editor.js` script. All styling and font dependencies are managed automatically by the editor.
 
 ```html
 <script src="html-editor.js"></script>
-```
-
-## 🛠 Usage
-
-### Replace a Textarea (Form Integration)
-Turn any form field into a visual builder. The content is automatically synced for form submission.
-
-```html
-<textarea id="my-editor" name="content"></textarea>
-
 <script>
-    const builder = new HtmlEditor('#my-editor');
+    const editor = new HtmlEditor('#my-element');
     
-    // Set initial content
-    builder.setValue('<h1>Hello World</h1>');
-    
-    // Get Data
-    const html = builder.getContent();       // Full clean HTML
-    const text = builder.getText();          // Just plain text
-    const count = builder.getElementCount(); // Number of top-level elements
-    const len = builder.getContentLength();  // Total HTML character count
-    
-    // Listen for changes
-    builder.onChange(html => {
-        console.log('Updated HTML:', html);
-    });
+    // Restore saved session or load demo
+    editor.setValue(editor.getStored() || '<h1>My Design</h1>');
 </script>
 ```
 
-### Direct Division Usage
-Use it as a standalone page builder container.
+## 🧩 Visual Logic Building
 
-```html
-<div id="builder-container"></div>
+The builder features a revolutionary **Target Slot** logic system. Orchestrating interactions is as simple as:
 
-<script>
-    const builder = new HtmlEditor('#builder-container');
-</script>
+1.  **Choose a Trigger**: Select from common events like `Click`, `MouseEnter`, or `Change`.
+2.  **Assign a Target**: Drag any element from the canvas directly into the Logic Slot.
+3.  **Perform an Action**: The editor provides a curated list of actions specific to your target (e.g., "Change Video Source" or "Toggle Section Visibility").
+4.  **Value Mapping**: Bind static values or map live data between components (e.g., "Set Heading Text from Input Value").
+
+## 🛠 Advanced API
+
+Take full control of the editor's lifecycle:
+
+```javascript
+const editor = new HtmlEditor('#editor');
+
+// Persistence
+const savedData = editor.getStored();      // Retrieve from localStorage
+editor.triggerC();                         // Manually trigger a save
+
+// Content Management
+editor.setValue('...');                    // Update the canvas
+const html = editor.getContent();          // Get clean, export-ready HTML
+
+// Events
+editor.onChange(html => {
+    console.log('Canvas modified:', html);
+});
 ```
 
 ## 🎨 Component Library
-The builder comes packed with essential components:
--   **Layouts**: Responsive Grids (2, 3, 4 columns), Sections, Spacers, Dividers.
--   **Content**: Headings, Paragraphs, Buttons, Links.
--   **Media**: Images, Video players, Audio clips, Icons.
--   **Marketing**: Feature Cards, Testimonials, CTA Banners, FAQ Items.
--   **Forms**: Styled Inputs, Textareas, Labels.
 
-## 🔍 The Inspector
-Right-click any element on the canvas to open the **Design Inspector**. From here, you can:
-1.  **Modify Styles**: Adjust layout, typography, colors, and flexbox settings.
-2.  **Edit Attributes**: Change image sources, link URLs, and CSS classes.
-3.  **Tweak Code**: Edit the raw HTML or inner text directly for pixel-perfect control.
+Includes 20+ premium components out of the box:
+-   **Hero Sections**: Dark mode headers, CTA banners, and center-aligned features.
+-   **Grid Systems**: Auto-responsive 2, 3, and 4-column layouts.
+-   **Media Hub**: Interactive Video players, Audio clips, and Image galleries.
+-   **Logic Components**: Form inputs, Buttons, and dynamic UI elements.
 
 ## 📄 License
-MIT License. Free to use in any personal or commercial project.
+MIT License. Optimized for high-performance professional web projects.
