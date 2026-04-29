@@ -106,6 +106,22 @@ class HtmlEditor {
     }
 
     setupStyles() {
+        // Dynamically inject external dependencies if missing
+        const deps = [
+            { id: 'he-fa', url: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', type: 'css' },
+            { id: 'he-font', url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', type: 'css' }
+        ];
+
+        deps.forEach(dep => {
+            if (!document.querySelector(`link[href*="${dep.id}"]`) && !document.querySelector(`link[href*="${dep.url}"]`)) {
+                const l = document.createElement('link');
+                l.rel = 'stylesheet';
+                l.href = dep.url;
+                if (dep.id) l.id = dep.id;
+                document.head.appendChild(l);
+            }
+        });
+
         const s = document.createElement('style');
         s.textContent = `
             :root { --he-p: #6366f1; --he-bg: #f8fafc; --he-t: #1e293b; --he-b: #e2e8f0; }
@@ -389,6 +405,13 @@ class HtmlEditor {
 
     toggleP(f) { const p = this.canvas.querySelector('.he-placeholder'); if (!p) return; const h = this.canvas.children.length > 1 || (this.canvas.textContent.trim().length > 0 && this.canvas.innerText !== p.innerText); p.style.display = (f === false || h) ? 'none' : 'block'; }
     getContent() { const cl = this.canvas.cloneNode(true); cl.querySelectorAll('.he-overlay, .he-placeholder, .he-indicator').forEach(x => x.remove()); cl.querySelectorAll('*').forEach(x => { x.classList.remove('he-selected'); x.removeAttribute('draggable'); x.removeAttribute('contenteditable'); }); cl.removeAttribute('contenteditable'); return cl.innerHTML.trim(); }
+    
+    // Utility Methods
+    getText() { return this.canvas.innerText.trim(); }
+    getContentLength() { return this.getContent().length; }
+    getTextLength() { return this.getText().length; }
+    getElementCount() { return [...this.canvas.children].filter(c => !c.classList.contains('he-placeholder')).length; }
+
     onChange(cb) { this.changeCallbacks.push(cb); }
     triggerC() { const h = this.getContent(); if (this.targetTextarea) this.targetTextarea.value = h; this.changeCallbacks.forEach(x => x(h)); if (this.onUpdate) this.onUpdate(h); }
     saveToHistory() { const h = this.canvas.innerHTML; if (this.history[this.historyIndex] === h) return; this.history = this.history.slice(0, this.historyIndex + 1); this.history.push(h); if (this.history.length > 50) this.history.shift(); this.historyIndex = this.history.length - 1; }
