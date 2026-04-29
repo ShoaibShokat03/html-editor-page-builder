@@ -87,7 +87,7 @@
         const editor = new HtmlEditor('#editor');
         
         // Load initial rich demo content
-        editor.setValue(`
+        editor.setValue(editor.getStored() || `
             <section style="padding: 60px 40px; text-align: center; background: #0f172a; color: white; border-radius: 20px; margin-bottom: 40px;">
                 <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 20px;">Premium Visual Builder</h1>
                 <p style="font-size: 1.2rem; color: #94a3b8; max-width: 600px; margin: 0 auto;">Build stunning pages with ease. Drag components, edit attributes, and export clean HTML.</p>
