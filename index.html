@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Page Builder</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow-y: auto;
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+        }
+        form {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        button[type="submit"] {
+            background: #6366f1;
+            color: white;
+            padding: 15px 45px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        button[type="submit"]:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+        }
+        @media (max-width: 768px) {
+            form {
+                margin: 20px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <form action="" method="post">
+        <h2 style="margin-bottom: 30px; font-weight: 800; color: #0f172a;">Update Your Page</h2>
+        
+        <div class="form-group">
+            <label for="title">Page Title</label>
+            <input type="text" id="title" placeholder="Enter page title">
+        </div>
+        
+        <div class="form-group">
+            <label for="editor">Page Content (Visual Builder)</label>
+            <textarea name="content" id="editor"></textarea>
+        </div>
+        
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <script src="html-editor.js"></script>
+    <script>
+        const editor = new HtmlEditor('#editor');
+        
+        // Load initial rich demo content
+        editor.setValue(`
+            <section style="padding: 60px 40px; text-align: center; background: #0f172a; color: white; border-radius: 20px; margin-bottom: 40px;">
+                <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 20px;">Premium Visual Builder</h1>
+                <p style="font-size: 1.2rem; color: #94a3b8; max-width: 600px; margin: 0 auto;">Build stunning pages with ease. Drag components, edit attributes, and export clean HTML.</p>
+            </section>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px;">
+                <div style="padding: 20px; background: white; border-radius: 16px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-top:0">Video Component</h4>
+                    <video controls style="width: 100%; border-radius: 10px;">
+                        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                    </video>
+                    <p style="font-size:0.9rem; color:#64748b; margin-top:10px">Select this video to change its source URL in the inspector.</p>
+                </div>
+                <div style="padding: 20px; background: white; border-radius: 16px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-top:0">Audio Component</h4>
+                    <audio controls style="width: 100%;">
+                        <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg">
+                    </audio>
+                    <p style="font-size:0.9rem; color:#64748b; margin-top:10px">Edit audio properties directly from the sidebar.</p>
+                </div>
+            </div>
+
+            <div style="padding: 20px; background: #fdf2f2; border-left: 4px solid #ef4444; color: #991b1b; border-radius: 8px; margin-bottom: 40px; font-weight: 500;">
+                <i class="fa fa-code" style="margin-right: 10px;"></i> You can now edit raw HTML and Attributes in the Inspector!
+            </div>
+        `);
+
+        editor.onChange(value => {
+            // value is automatically synced to the #editor textarea
+            console.log('Builder updated');
+        });
+    </script>
+</body>
+</html>
+
+
+
