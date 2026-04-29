@@ -70,8 +70,8 @@ class HtmlEditor {
         const s = document.createElement('style');
         s.textContent = `
             :root { --he-p: #6366f1; --he-bg: #f8fafc; --he-t: #1e293b; --he-b: #e2e8f0; }
-            .he-main { display: flex; flex-direction: column; width: 100%; font-family: 'Inter', sans-serif; background: var(--he-bg); position: relative; height: 100%; }
-            .he-toolbar { height: 60px; background: white; border-bottom: 1px solid var(--he-b); padding: 0 16px; display: flex; align-items: center; gap: 8px; z-index: 1000; position: sticky; top: 0; flex-shrink: 0; box-sizing: border-box; }
+            .he-main { display: flex; flex-direction: column; width: 100%; font-family: 'Inter', sans-serif; background: var(--he-bg); position: relative; height: 100%; overflow: hidden; }
+            .he-toolbar { min-height: 60px; background: white; border-bottom: 1px solid var(--he-b); padding: 8px 16px; display: flex; align-items: center; gap: 8px; z-index: 1000; position: sticky; top: 0; flex-shrink: 0; flex-wrap: wrap; box-sizing: border-box; }
             .he-group { display: flex; gap: 4px; padding-right: 8px; border-right: 1px solid var(--he-b); align-items: center; }
             .he-group:last-child { border-right: none; }
             .he-btn { background: transparent; border: 1px solid transparent; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: var(--he-t); font-size: 14px; transition: 0.2s; display: flex; align-items: center; gap: 6px; }
@@ -113,7 +113,7 @@ class HtmlEditor {
             
             /* Fullscreen Mode */
             .he-fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483647 !important; margin: 0 !important; border-radius: 0 !important; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; }
-            .he-fullscreen .he-workspace { flex-grow: 1; height: auto; overflow-y: auto !important; display: block; padding: 40px 0; }
+            .he-fullscreen .he-workspace { flex: 1; min-height: 0; overflow-y: auto !important; display: block; padding: 40px 0; }
             .he-fullscreen .he-canvas { margin: 0 auto; min-height: 100%; }
         `;
         document.head.appendChild(s);
