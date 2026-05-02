@@ -231,7 +231,7 @@ class HtmlEditor {
     const isInline =
       target.tagName === "TEXTAREA" ||
       this.container.parentNode !== document.body;
-    this.container.style.cssText = `width: 100%; max-width: 100%; min-height: 700px; position: relative; overflow: visible; border: 1px solid #e2e8f0; border-radius: 20px; z-index: ${isInline ? "10" : "9999"}; box-sizing: border-box; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);`;
+    this.container.style.cssText = `width: 100%; max-width: 100%; min-width: 0; min-height: 700px; position: relative; overflow: hidden; contain: layout; border: 1px solid #e2e8f0; border-radius: 20px; z-index: ${isInline ? "10" : "9999"}; box-sizing: border-box; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);`;
 
     this.onUpdate = null;
     this.changeCallbacks = [];
@@ -817,8 +817,13 @@ class HtmlEditor {
             .he-cat-tag { grid-column: 1 / -1; font-size: 11px; font-weight: 800; color: var(--he-ts); text-transform: uppercase; letter-spacing: 2px; margin: 30px 0 10px; padding-left: 4px; }
             .he-cat-tag:first-child { margin-top: 0; }
 
-            .he-workspace { display: flex; flex: 1; flex-direction: column; align-items: center; background: #f1f5f9; overflow: auto; padding: 0; position: relative; z-index: 1; scroll-behavior: smooth; width: 100%; }
-            .he-canvas { width: 100%;min-height:100%;margin-bottom:50px; background: white; border-radius: 0; padding: 40px; position: relative; outline: none; box-sizing: border-box; box-shadow: none; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+            .he-workspace { display: flex; flex: 1; flex-direction: column; align-items: center; background: #f1f5f9; overflow: auto; padding: 0; position: relative; z-index: 1; scroll-behavior: smooth; width: 100%; min-width: 0; }
+            .he-canvas { width: 100%;min-height:100%;margin-bottom:50px; background: white; border-radius: 0; padding: 40px; position: relative; outline: none; box-sizing: border-box; box-shadow: none; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
+            /* Containment for wide pasted markup (e.g. WordPress imports) so the
+               editor never breaks the surrounding page layout. */
+            .he-canvas img, .he-canvas video, .he-canvas iframe, .he-canvas embed, .he-canvas object { max-width: 100% !important; height: auto; }
+            .he-canvas table { max-width: 100%; display: block; overflow-x: auto; }
+            .he-canvas pre { max-width: 100%; overflow-x: auto; white-space: pre-wrap; }
             
             .he-inspected { outline: 2px solid var(--he-p) !important; outline-offset: -2px !important; box-shadow: inset 0 0 0 1000px rgba(79, 70, 229, 0.05) !important; }
             
