@@ -865,8 +865,9 @@ class HtmlEditor {
             .he-quad-label { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
             .he-quad-input { height: 28px !important; padding: 4px 6px !important; font-size: 11px !important; }
 
-            .he-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #cbd5e1; pointer-events: none; width: 80%; }
-            .he-placeholder i { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 80px; margin-bottom: 24px; }
+            .he-canvas-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #cbd5e1; pointer-events: none; width: 80%; max-width: 600px; user-select: none; z-index: 1; }
+            .he-canvas-placeholder i { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 80px; margin-bottom: 24px; }
+            .he-canvas-placeholder.hidden { display: none; }
             
             /* Responsive Toggles */
             .he-device-toggles { display: flex; gap: 4px; background: var(--he-bg); padding: 4px; border-radius: 10px; border: 1px solid var(--he-b); }
@@ -923,12 +924,11 @@ class HtmlEditor {
                     </div>
                 </header>
                 <div class="he-workspace">
-                    <div class="he-canvas" id="he-canvas" contenteditable="true">
-                        <div class="he-placeholder">
-                            <i class="fa fa-layer-group"></i>
-                            <h2 style="font-size: 28px; font-weight: 800; color: #0f172a; margin: 0 0 12px;">Build Something Beautiful</h2>
-                            <p style="font-size: 16px; color: #64748b; margin: 0;">Click "Add Elements" to start dragging components onto your canvas.</p>
-                        </div>
+                    <div class="he-canvas" id="he-canvas" contenteditable="true"></div>
+                    <div class="he-canvas-placeholder" id="he-canvas-placeholder">
+                        <i class="fa fa-layer-group"></i>
+                        <h2 style="font-size: 28px; font-weight: 800; color: #0f172a; margin: 0 0 12px;">Build Something Beautiful</h2>
+                        <p style="font-size: 16px; color: #64748b; margin: 0;">Click "Add Elements" to start dragging components onto your canvas.</p>
                     </div>
                     <div class="he-hover-box" id="he-hover-box"></div>
                     <div class="he-drop-indicator" id="he-drop-indicator"></div>
@@ -978,6 +978,7 @@ class HtmlEditor {
             </div>
         `;
     this.canvas = document.getElementById("he-canvas");
+    this.canvasPlaceholder = document.getElementById("he-canvas-placeholder");
     this.sidebar = document.getElementById("he-sidebar");
     this.props = document.getElementById("he-props");
     this.floatingOverlay = document.getElementById("he-floating-overlay");
@@ -1157,6 +1158,18 @@ class HtmlEditor {
       this.triggerC();
       this.updateOverlay();
     });
+
+    this.canvas.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const cd = e.clipboardData || window.clipboardData;
+      if (!cd) return;
+      const html = cd.getData("text/html");
+      const text = cd.getData("text/plain");
+      const cleaned = this.sanitizePastedHtml(html, text);
+      document.execCommand("insertHTML", false, cleaned);
+      this.saveToHistory();
+      this.triggerC();
+    });
     document
       .getElementById("he-u")
       .addEventListener("click", () => this.undo());
@@ -1177,12 +1190,7 @@ class HtmlEditor {
           "Are you sure you want to clear the entire canvas? This cannot be undone.",
         )
       ) {
-        this.canvas.innerHTML = `
-                <div class="he-placeholder">
-                    <i class="fa fa-layer-group"></i>
-                    <h2 style="font-size: 28px; font-weight: 800; color: #0f172a; margin: 0 0 12px;">Build Something Beautiful</h2>
-                    <p style="font-size: 16px; color: #64748b; margin: 0;">Click "Add Elements" to start dragging components onto your canvas.</p>
-                </div>`;
+        this.canvas.innerHTML = "";
         this.deselect();
         this.saveToHistory();
         this.triggerC();
@@ -1272,8 +1280,6 @@ class HtmlEditor {
     const d = document.createElement("div");
     d.innerHTML = h;
     const e = d.firstElementChild;
-    const p = this.canvas.querySelector(".he-placeholder");
-    if (p) p.remove();
     if (this.selectedElement && this.selectedElement !== this.canvas) {
       const sel = this.selectedElement;
       if (
@@ -1617,10 +1623,58 @@ class HtmlEditor {
         .join("")
     );
   }
+  sanitizePastedHtml(html, text) {
+    if (!html || !html.trim()) {
+      const t = text || "";
+      const escaped = t.replace(/[&<>]/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
+      );
+      return escaped.replace(/\r?\n/g, "<br>");
+    }
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    tmp
+      .querySelectorAll(
+        "script, style, meta, link, base, title, noscript, head, html, body",
+      )
+      .forEach((n) => {
+        if (n.tagName === "BODY" || n.tagName === "HTML" || n.tagName === "HEAD") {
+          while (n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
+        }
+        n.remove();
+      });
+    tmp.querySelectorAll("*").forEach((el) => {
+      [...el.attributes].forEach((a) => {
+        const name = a.name.toLowerCase();
+        const val = a.value || "";
+        if (name.startsWith("on")) el.removeAttribute(a.name);
+        else if (
+          (name === "href" || name === "src" || name === "xlink:href") &&
+          /^\s*javascript:/i.test(val)
+        )
+          el.removeAttribute(a.name);
+        else if (name.startsWith("data-mce-") || name === "data-pm-slice")
+          el.removeAttribute(a.name);
+      });
+      if (el.className && /^(Mso|Apple-)/i.test(el.className))
+        el.removeAttribute("class");
+      if (
+        el.tagName &&
+        (el.tagName.includes(":") || /^(O|W|M):/i.test(el.tagName))
+      ) {
+        while (el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+        el.remove();
+      }
+    });
+    tmp.querySelectorAll("[class]").forEach((el) => {
+      if (!el.getAttribute("class").trim()) el.removeAttribute("class");
+    });
+    return tmp.innerHTML;
+  }
   getContent() {
     const cl = this.canvas.cloneNode(true);
     cl.querySelectorAll(
-      ".he-floating-overlay, .he-hover-box, .he-placeholder",
+      ".he-floating-overlay, .he-hover-box, .he-placeholder, .he-canvas-placeholder",
     ).forEach((x) => x.remove());
     cl.querySelectorAll(".he-media-wrap").forEach((w) => {
       const media = w.querySelector("audio, video, img");
@@ -1639,9 +1693,21 @@ class HtmlEditor {
     const h = this.getContent();
     if (this.targetTextarea) this.targetTextarea.value = h;
     this.changeCallbacks.forEach((x) => x(h));
+    this.updatePlaceholder();
 
-    // Auto-Save Persistence
-    localStorage.setItem("he-autosave", this.canvas.innerHTML);
+    // Auto-Save Persistence (clean content only, no placeholder leakage)
+    localStorage.setItem("he-autosave", h);
+  }
+  updatePlaceholder() {
+    if (!this.canvasPlaceholder) return;
+    const stripped = this.canvas.innerHTML
+      .replace(/<br\s*\/?>/gi, "")
+      .replace(/&nbsp;/gi, "")
+      .replace(/<(div|p|span)>\s*<\/\1>/gi, "")
+      .trim();
+    const hasText = this.canvas.textContent.replace(/\s/g, "").length > 0;
+    const isEmpty = stripped === "" && !hasText;
+    this.canvasPlaceholder.classList.toggle("hidden", !isEmpty);
   }
   saveToHistory() {
     const h = this.canvas.innerHTML;
@@ -1666,7 +1732,13 @@ class HtmlEditor {
     }
   }
   setValue(h) {
-    this.canvas.innerHTML = h;
+    // Strip any legacy placeholder content from imported/stored HTML
+    const tmp = document.createElement("div");
+    tmp.innerHTML = h || "";
+    tmp
+      .querySelectorAll(".he-placeholder, .he-canvas-placeholder")
+      .forEach((p) => p.remove());
+    this.canvas.innerHTML = tmp.innerHTML;
     this.saveToHistory();
     this.triggerC();
   }
