@@ -243,6 +243,8 @@ class HtmlEditor {
     this.inspectedElement = null; // Track pinned element
     this.searchQuery = "";
     this.draggedElForEvent = null;
+    this.imageLibrary = null;
+    this.imageLibraryConfig = null;
     this.eventManager = new HtmlEventManager(this);
 
     this.elements = [
@@ -868,6 +870,19 @@ class HtmlEditor {
             .he-canvas-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #cbd5e1; pointer-events: none; width: 80%; max-width: 600px; user-select: none; z-index: 1; }
             .he-canvas-placeholder i { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 80px; margin-bottom: 24px; }
             .he-canvas-placeholder.hidden { display: none; }
+
+            /* Image Library Picker Dropdown */
+            .he-img-picker { position: fixed; width: 360px; max-height: 480px; background: white; border: 1px solid var(--he-b); border-radius: 14px; box-shadow: var(--he-shadow); z-index: 2147483646; display: flex; flex-direction: column; overflow: hidden; }
+            .he-img-picker-search { padding: 12px; border-bottom: 1px solid var(--he-b); position: relative; background: #f8fafc; }
+            .he-img-picker-search i { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); color: var(--he-ts); font-size: 12px; pointer-events: none; }
+            .he-img-picker-search input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--he-b); border-radius: 8px; outline: none; font-size: 13px; box-sizing: border-box; background: white; }
+            .he-img-picker-search input:focus { border-color: var(--he-p); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08); }
+            .he-img-picker-grid { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .he-img-picker-item { cursor: pointer; border: 1px solid var(--he-b); border-radius: 8px; overflow: hidden; transition: 0.15s; background: #f8fafc; }
+            .he-img-picker-item:hover { border-color: var(--he-p); transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.08); }
+            .he-img-picker-item img { width: 100%; aspect-ratio: 1.2; object-fit: cover; display: block; background: #e2e8f0; }
+            .he-img-picker-label { padding: 6px 8px; font-size: 11px; font-weight: 600; color: var(--he-ts); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .he-img-picker-empty { grid-column: 1 / -1; text-align: center; color: var(--he-ts); padding: 30px 12px; font-size: 13px; }
             
             /* Responsive Toggles */
             .he-device-toggles { display: flex; gap: 4px; background: var(--he-bg); padding: 4px; border-radius: 10px; border: 1px solid var(--he-b); }
@@ -1376,9 +1391,14 @@ class HtmlEditor {
             : ""
           : el.getAttribute(a.prop) || "";
       if (a.prop === "src") {
+        const hasLib =
+          tag === "IMG" &&
+          Array.isArray(this.imageLibrary) &&
+          this.imageLibrary.length > 0;
         h += `<div class="he-field">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                            <label class="he-label" style="margin:0">${a.label}</label>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:6px">
+                            <label class="he-label" style="margin:0;flex:1">${a.label}</label>
+                            ${hasLib ? `<button type="button" class="he-btn" id="he-library-trigger" style="padding:2px 8px;font-size:10px;height:20px;background:var(--he-p-light);color:var(--he-p)"><i class="fa fa-images"></i> Library</button>` : ``}
                             <button type="button" class="he-btn" id="he-upload-trigger" style="padding:2px 8px;font-size:10px;height:20px;background:var(--he-p-light);color:var(--he-p)"><i class="fa fa-upload"></i> Upload</button>
                         </div>
                         <textarea class="he-input" style="height:60px;padding:8px;resize:none" data-prop="src" data-attr="true">${val}</textarea>
@@ -1520,6 +1540,14 @@ class HtmlEditor {
           }
         };
         reader.readAsDataURL(file);
+      });
+    }
+
+    const libraryTrigger = this.props.querySelector("#he-library-trigger");
+    if (libraryTrigger) {
+      libraryTrigger.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        this.openImagePicker(libraryTrigger);
       });
     }
 
@@ -1744,5 +1772,214 @@ class HtmlEditor {
   }
   getStored() {
     return localStorage.getItem("he-autosave");
+  }
+
+  /**
+   * Fetch an external image library so the Inspector shows a searchable
+   * picker dropdown when an <img> element is selected.
+   *
+   * @param {string} url - HTTP(S) endpoint that returns a JSON image list.
+   * @param {object} [options]
+   * @param {object} [options.headers] - Extra HTTP headers (e.g. { "X-Api-Key": "..." }).
+   * @param {object} [options.params]  - Query-string params merged into the URL.
+   * @param {string} [options.method]  - "GET" (default) or "POST".
+   * @param {object|string} [options.body] - Body for POST; objects are JSON-encoded.
+   * @param {string} [options.token]   - Shorthand: adds Authorization: Bearer <token>.
+   * @param {function} [options.transform] - (data) => array|object. Map a custom
+   *        response shape into the standard one before normalization.
+   * @returns {Promise<Array>} normalized images: [{ url, thumb, title, alt, tags }]
+   *
+   * Accepted response shapes (any of):
+   *   1) ["https://...", "https://..."]
+   *   2) [{ url, thumb?, title?, alt?, tags? }, ...]
+   *   3) { images: [...] } | { items: [...] } | { data: [...] } | { results: [...] }
+   *   Item-level aliases also accepted: src/image/full/original (url),
+   *   thumbnail/preview (thumb), name/caption (title).
+   */
+  async getImagesLibrary(url, options) {
+    if (!url) throw new Error("getImagesLibrary: url is required");
+    options = options || {};
+    const {
+      headers = {},
+      params = null,
+      method = "GET",
+      body = null,
+      token = null,
+      transform = null,
+    } = options;
+
+    let finalUrl = url;
+    if (params && typeof params === "object") {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.set(k, v);
+      });
+      const qs = sp.toString();
+      if (qs) finalUrl += (url.includes("?") ? "&" : "?") + qs;
+    }
+
+    const fetchHeaders = Object.assign({}, headers);
+    if (token) fetchHeaders["Authorization"] = "Bearer " + token;
+
+    const init = { method, headers: fetchHeaders };
+    if (body && method.toUpperCase() !== "GET") {
+      if (typeof body === "string") {
+        init.body = body;
+      } else {
+        init.body = JSON.stringify(body);
+        if (!fetchHeaders["Content-Type"])
+          fetchHeaders["Content-Type"] = "application/json";
+      }
+    }
+
+    const res = await fetch(finalUrl, init);
+    if (!res.ok)
+      throw new Error(
+        `getImagesLibrary: ${res.status} ${res.statusText} from ${finalUrl}`,
+      );
+    let data = await res.json();
+    if (typeof transform === "function") data = transform(data);
+
+    const items = this._normalizeImageLibrary(data);
+    this.imageLibrary = items;
+    this.imageLibraryConfig = { url, options };
+
+    if (this.isSidebarOpen && this.inspectedElement) this.renderProps();
+    return items;
+  }
+
+  setImagesLibrary(items) {
+    this.imageLibrary = this._normalizeImageLibrary(items);
+    if (this.isSidebarOpen && this.inspectedElement) this.renderProps();
+    return this.imageLibrary;
+  }
+
+  _normalizeImageLibrary(data) {
+    let raw = [];
+    if (Array.isArray(data)) raw = data;
+    else if (data && typeof data === "object")
+      raw = data.images || data.items || data.data || data.results || [];
+
+    return raw
+      .map((it) => {
+        if (typeof it === "string")
+          return { url: it, thumb: it, title: "", alt: "", tags: [] };
+        if (!it || typeof it !== "object") return null;
+        const url =
+          it.url || it.src || it.image || it.full || it.original || "";
+        const thumb =
+          it.thumb || it.thumbnail || it.preview || it.url || it.src || url;
+        const title = it.title || it.name || it.caption || "";
+        const alt = it.alt || it.title || it.name || "";
+        let tags = [];
+        if (Array.isArray(it.tags)) tags = it.tags.map(String);
+        else if (typeof it.tags === "string")
+          tags = it.tags.split(/[,\s]+/).filter(Boolean);
+        return { url, thumb, title, alt, tags };
+      })
+      .filter((it) => it && it.url);
+  }
+
+  openImagePicker(anchorBtn) {
+    const existing = document.getElementById("he-img-picker");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    if (!Array.isArray(this.imageLibrary) || !this.imageLibrary.length) return;
+
+    const panel = document.createElement("div");
+    panel.id = "he-img-picker";
+    panel.className = "he-img-picker";
+    panel.innerHTML = `
+        <div class="he-img-picker-search">
+            <i class="fa fa-search"></i>
+            <input type="text" id="he-img-picker-input" placeholder="Search ${this.imageLibrary.length} images..." autocomplete="off">
+        </div>
+        <div class="he-img-picker-grid" id="he-img-picker-grid"></div>`;
+    document.body.appendChild(panel);
+
+    const rect = anchorBtn.getBoundingClientRect();
+    const panelW = 360;
+    let left = rect.right - panelW;
+    if (left < 8) left = 8;
+    if (left + panelW > window.innerWidth - 8)
+      left = window.innerWidth - panelW - 8;
+    panel.style.left = left + "px";
+    panel.style.top = rect.bottom + 6 + "px";
+
+    const escapeAttr = (s) =>
+      String(s || "").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const grid = panel.querySelector("#he-img-picker-grid");
+    const input = panel.querySelector("#he-img-picker-input");
+
+    const renderGrid = (q) => {
+      const query = (q || "").toLowerCase().trim();
+      const filtered = this.imageLibrary.filter((it) => {
+        if (!query) return true;
+        return (
+          (it.title || "").toLowerCase().includes(query) ||
+          (it.alt || "").toLowerCase().includes(query) ||
+          (it.url || "").toLowerCase().includes(query) ||
+          it.tags.some((t) => t.toLowerCase().includes(query))
+        );
+      });
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="he-img-picker-empty">No images match "${escapeAttr(query)}"</div>`;
+        return;
+      }
+      grid.innerHTML = filtered
+        .map(
+          (it) => `
+            <div class="he-img-picker-item" data-url="${escapeAttr(it.url)}" title="${escapeAttr(it.title || it.alt || it.url)}">
+                <img src="${escapeAttr(it.thumb || it.url)}" alt="${escapeAttr(it.alt)}" loading="lazy">
+                <div class="he-img-picker-label">${escapeAttr(it.title || it.alt || "")}</div>
+            </div>`,
+        )
+        .join("");
+      grid.querySelectorAll(".he-img-picker-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          this._applyImagePick(item.dataset.url);
+          closePicker();
+        });
+      });
+    };
+
+    const closePicker = () => {
+      panel.remove();
+      document.removeEventListener("mousedown", outsideHandler, true);
+      document.removeEventListener("keydown", keyHandler, true);
+    };
+    const outsideHandler = (e) => {
+      if (!panel.contains(e.target) && e.target !== anchorBtn) closePicker();
+    };
+    const keyHandler = (e) => {
+      if (e.key === "Escape") closePicker();
+    };
+
+    input.addEventListener("input", (e) => renderGrid(e.target.value));
+    setTimeout(() => {
+      document.addEventListener("mousedown", outsideHandler, true);
+      document.addEventListener("keydown", keyHandler, true);
+      input.focus();
+    }, 0);
+
+    renderGrid("");
+  }
+
+  _applyImagePick(url) {
+    const e = this.inspectedElement;
+    if (!e || !url) return;
+    let target = e;
+    if (e.classList && e.classList.contains("he-media-wrap"))
+      target = e.querySelector("audio, video, img") || e;
+    if (target.tagName === "IMG") target.setAttribute("src", url);
+    const ta = this.props.querySelector(
+      'textarea[data-prop="src"][data-attr="true"]',
+    );
+    if (ta) ta.value = url;
+    this.updateOverlay();
+    this.saveToHistory();
+    this.triggerC();
   }
 }

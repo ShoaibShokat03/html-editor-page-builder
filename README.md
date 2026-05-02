@@ -58,6 +58,103 @@ editor.onChange(html => {
 });
 ```
 
+## 🖼 External Image Library
+
+Wire any image-list endpoint into the Inspector. Once a library is loaded, selecting an `<img>` element exposes a **Library** button next to **Upload** that opens a searchable thumbnail dropdown — clicking a thumbnail sets the image's `src`.
+
+### Usage
+
+```javascript
+const editor = new HtmlEditor('#editor');
+
+// Most basic — endpoint that returns a JSON list of images
+await editor.getImagesLibrary('https://api.example.com/images');
+
+// With auth token (sent as `Authorization: Bearer <token>`)
+await editor.getImagesLibrary('https://api.example.com/images', {
+    token: 'YOUR_API_TOKEN'
+});
+
+// Custom headers + query params
+await editor.getImagesLibrary('https://api.example.com/v1/media', {
+    headers: { 'X-Api-Key': 'abc123' },
+    params:  { folder: 'hero', per_page: 100 }
+});
+
+// POST with body
+await editor.getImagesLibrary('https://api.example.com/search', {
+    method: 'POST',
+    body:   { type: 'image', limit: 200 },
+    token:  'YOUR_API_TOKEN'
+});
+
+// Adapt a non-standard response shape with `transform`
+await editor.getImagesLibrary('https://my.cms/api/files', {
+    transform: (raw) => raw.payload.media.map(m => ({
+        url:   m.cdnUrl,
+        thumb: m.cdnUrl + '?w=200',
+        title: m.fileName,
+        tags:  m.labels
+    }))
+});
+
+// Or skip the network entirely and feed images directly
+editor.setImagesLibrary([
+    { url: 'https://cdn.example.com/a.jpg', title: 'Hero A', tags: ['hero'] },
+    { url: 'https://cdn.example.com/b.png', title: 'Logo',  tags: ['brand'] }
+]);
+```
+
+### Accepted API response shapes
+
+The client is flexible — any of the following will work without a `transform`:
+
+```jsonc
+// 1) Plain array of URLs
+["https://cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg"]
+
+// 2) Array of objects (recommended — enables search by title/tags)
+[
+    {
+        "url":   "https://cdn.example.com/a.jpg",
+        "thumb": "https://cdn.example.com/a-200.jpg",
+        "title": "Mountain Hero",
+        "alt":   "Snowy peaks at sunset",
+        "tags":  ["hero", "nature", "outdoor"]
+    }
+]
+
+// 3) Wrapped in any of: images / items / data / results
+{ "images": [ /* ... */ ] }
+```
+
+**Per-item field aliases** (so most CMS / DAM responses work out of the box):
+
+| Canonical | Also accepted                                |
+| --------- | -------------------------------------------- |
+| `url`     | `src`, `image`, `full`, `original`           |
+| `thumb`   | `thumbnail`, `preview` (falls back to `url`) |
+| `title`   | `name`, `caption`                            |
+| `alt`     | `title`, `name`                              |
+| `tags`    | array of strings, **or** comma/space-separated string |
+
+### Method signature
+
+```typescript
+editor.getImagesLibrary(url: string, options?: {
+    headers?:   Record<string, string>;     // extra HTTP headers
+    params?:    Record<string, any>;        // merged into query string
+    method?:    'GET' | 'POST';             // default 'GET'
+    body?:      object | string;            // POST body (objects are JSON-encoded)
+    token?:     string;                     // shorthand → Authorization: Bearer <token>
+    transform?: (raw: any) => any;          // map a custom response shape
+}): Promise<Array<{ url, thumb, title, alt, tags }>>
+
+editor.setImagesLibrary(items: Array): Array  // direct (no fetch)
+```
+
+The Inspector's image picker reacts live: refresh the library at any point and the dropdown will pick up the new list the next time it's opened.
+
 ## 🎨 Component Library
 
 Includes 20+ premium components out of the box:
